@@ -45,7 +45,7 @@ def train(X, Y, X_test, Y_test, accuracy_thresh):
         epoch_results = get_classification_results(X_test, w)
         epoch_accuracy = get_accuracy(Y_test, epoch_results)
 
-        print("Epoch: {}\tTraining accuracy: {}".format(num_epochs_elapsed,
+        print("\tEpoch: {}\tAccuracy: {}".format(num_epochs_elapsed,
                                                             epoch_accuracy))
 
         if epoch_accuracy >= accuracy_thresh:
@@ -98,6 +98,8 @@ def run_experiments(X, classes, accuracy_thresh):
         X_train, X_test = X[train_index], X[test_index]
         Y_train, Y_test = classes[train_index], classes[test_index]
         
+        print("Fold {}\n---------------------------------".format(fold_count))
+
         # Get weights from training set
         fold_weights, iter_required, fold_accuracy = train(X_train,
                                                             Y_train,
@@ -106,8 +108,6 @@ def run_experiments(X, classes, accuracy_thresh):
                                                             accuracy_thresh)
 
         fold_accuracies[fold_count - 1] = fold_accuracy
-        print("Fold {}\n\tAccuracy: {}\n\tIterations required: {}"
-                .format(fold_count, fold_accuracy, iter_required))
     
     return fold_accuracies
 
@@ -118,19 +118,10 @@ if __name__ == '__main__':
     # Extract our classes
     Y = data[:,0]
     binary_classes = np.where(Y <= 2, 0, 1)
-    # Remove classes column from input data
-    # data = np.delete(data, 0, 1)
-    # Normalize data
-    # data = stats.zscore(data)
+
     scaler = preprocessing.StandardScaler()
     data = scaler.fit_transform(data)
     # Turn first column into all 1's for bias (first column had the classes, which is irrelevant)
     data[:,0] = 1
 
-    # standardize the validation set as follows:
-    # standardized_validation = scaler.transform(validation)
-    # standardized_validation[:,0] = 1
-    # classify as follows
-    # weights = train(data, classes)
-    # np.array([resultT]).dot(standardized_validation)
     run_experiments(data, binary_classes, ACCURACY_THRESHOLD)
