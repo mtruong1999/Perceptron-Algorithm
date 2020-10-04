@@ -2,11 +2,13 @@
 Author: Michael Truong
 """
 import os
+import time
 import numpy as np
 import scipy.io as sio
 from scipy import stats
 from sklearn import preprocessing
 from sklearn.model_selection import StratifiedKFold
+from sklearn.decomposition import PCA
 
 DATA_DIR = os.path.join('data','data.mat')
 NUM_EPOCHS = 100
@@ -99,14 +101,14 @@ def run_experiments(X, classes, accuracy_thresh):
         Y_train, Y_test = classes[train_index], classes[test_index]
         
         print("Fold {}\n---------------------------------".format(fold_count))
-
+        start_time = time.time()
         # Get weights from training set
         fold_weights, iter_required, fold_accuracy = train(X_train,
                                                             Y_train,
                                                             X_test,
                                                             Y_test,
                                                             accuracy_thresh)
-
+        print("\tElapsed time: {} seconds".format(time.time() - start_time))
         fold_accuracies[fold_count - 1] = fold_accuracy
     
     return fold_accuracies
@@ -125,3 +127,15 @@ if __name__ == '__main__':
     data[:,0] = 1
 
     run_experiments(data, binary_classes, ACCURACY_THRESHOLD)
+
+    pca = PCA(n_components=2)
+    # Fit and transform data without the first column
+    transformed_data = pca.fit_transform(np.delete(data, 0, 1))
+    num_rows = transformed_data.shape[0]
+    # Add column of 1's for perceptron algorithm
+    transformed_data = np.hstack((
+            np.ones((num_rows, 1)),
+            transformed_data
+    ))
+    run_experiments(transformed_data, binary_classes, 0.92)
+
