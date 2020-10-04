@@ -10,9 +10,10 @@ from sklearn.model_selection import StratifiedKFold
 
 DATA_DIR = os.path.join('data','data.mat')
 NUM_EPOCHS = 100
+ACCURACY_THRESHOLD = 0.993
 np.random.seed(0)
 
-def train(X, Y, num_iterations):
+def train(X, Y, X_test, Y_test, accuracy_thresh):
     """Runs the perceptron algorithm to train a set of weights. 
     Runs num_iterations through the data set.
 
@@ -21,8 +22,6 @@ def train(X, Y, num_iterations):
     X - numpy array containing the feature vectors
     Y - numpy array containing the correct classification of
         each feature vector in X.
-    num_iterations - int indicating the number of iterations 
-        through the data set X perceptron is to run for.
 
     Returns
     -------
@@ -31,13 +30,28 @@ def train(X, Y, num_iterations):
     """
     # Initialize wieghts with zeros
     w = np.zeros(X.shape[1])
-    for _ in range(num_iterations):
+    accuracy_met = False
+    num_epochs_elapsed = 0
+
+    while not accuracy_met:
+        num_epochs_elapsed += 1
+
         for idx,element in enumerate(X):
             if Y[idx] == 1 and w.dot(element) < 0:
                 w = w + element
             elif Y[idx] == 0 and w.dot(element) >= 0:
                 w = w - element
-    return w
+        
+        epoch_results = get_classification_results(X_test, w)
+        epoch_accuracy = get_accuracy(Y_test, epoch_results)
+
+        print("Epoch: {}\tTraining accuracy: {}".format(num_epochs_elapsed,
+                                                            epoch_accuracy))
+
+        if epoch_accuracy >= accuracy_thresh:
+            accuracy_met = True
+
+    return w, num_epochs_elapsed, epoch_accuracy
 
 def classify(x, weights):
     """Uses a set of weights to classify a single data instance.
@@ -73,7 +87,7 @@ def get_classification_results(X, W):
 def get_accuracy(actual_labels, predicted_labels):
     return np.count_nonzero(actual_labels == predicted_labels)/actual_labels.size
 
-def run_experiments(X, classes):
+def run_experiments(X, classes, accuracy_thresh):
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
     fold_count = 0
     fold_accuracies = np.zeros(5)
@@ -85,13 +99,15 @@ def run_experiments(X, classes):
         Y_train, Y_test = classes[train_index], classes[test_index]
         
         # Get weights from training set
-        fold_weights = train(X_train, Y_train)
+        fold_weights, iter_required, fold_accuracy = train(X_train,
+                                                            Y_train,
+                                                            X_test,
+                                                            Y_test,
+                                                            accuracy_thresh)
 
-        # Get results from test set
-        fold_results = get_classification_results(X_test, fold_weights)
-        fold_accuracy = get_accuracy(Y_test, fold_results)
         fold_accuracies[fold_count - 1] = fold_accuracy
-        print("Fold {} accuracy: {}".format(fold_count, fold_accuracy))
+        print("Fold {}\n\tAccuracy: {}\n\tIterations required: {}"
+                .format(fold_count, fold_accuracy, iter_required))
     
     return fold_accuracies
 
@@ -117,11 +133,4 @@ if __name__ == '__main__':
     # classify as follows
     # weights = train(data, classes)
     # np.array([resultT]).dot(standardized_validation)
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=10)
-    foldCount = 0
-    for train, test in skf.split(data, Y):
-        print("\nFold {}".format(foldCount + 1))
-        trainX, testX = data[train], data[test]
-        trainY, testY = Y[train], Y[test]
-        
-        trainedWeights = train(trainX, trainY, NUM_EPOCHS)
+    run_experiments(data, binary_classes, ACCURACY_THRESHOLD)
