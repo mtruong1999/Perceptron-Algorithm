@@ -5,7 +5,6 @@ import os
 import time
 import numpy as np
 import scipy.io as sio
-from scipy import stats
 from sklearn import preprocessing
 from sklearn.model_selection import StratifiedKFold
 from sklearn.decomposition import PCA

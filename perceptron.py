@@ -1,8 +1,6 @@
 """
 Author: Michael Truong
 """
-import os
-import time
 import numpy as np
 
 class Perceptron:
