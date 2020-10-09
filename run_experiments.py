@@ -15,7 +15,7 @@ from optparse import OptionParser
 DATA_DIR = os.path.join('data','data.mat') # input file
 ACCURACY_THRESHOLD = 0.993 # Threshold for 5-fold CV on full data
 ACCURACY_THRESHOLD_PCA = 0.92 # Threshold for 5-fold CV on PCA reduced data
-OUTPUT_FILE = 'results.txt' # Output file name
+OUTPUT_FILE = os.path.join('results','results.txt') # Output file name
 
 # Globals for 4-class classifier
 EPOCHS_1_2 = 1 # Epochs for training classifier on labels 1 and 2 
