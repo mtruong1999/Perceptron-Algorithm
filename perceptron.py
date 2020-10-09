@@ -6,6 +6,7 @@ import numpy as np
 class Perceptron:
 
     def __init__(self, X, Y, X_test=None, Y_test=None, accuracy_threshold=None, epochs=None):
+        """Initialized Perceptron class"""
         self.X = X
         self.Y = Y
 
@@ -25,6 +26,11 @@ class Perceptron:
         
 
     def train(self):
+        """Runs the perceptron algorithm. Stops after a specified
+        threshold accuracy is met when using validation. Otherwise,
+        trains until a specified number of epochs have passed.
+        """
+
         # Initialize wieghts with zeros
         w = np.zeros(self.X.shape[1])
         accuracy_met = False
@@ -49,19 +55,25 @@ class Perceptron:
             return w
 
     def epoch_fit(self, w):
+        """Iteratively adjusts a set of weights for the perceptron algorithm"""
         for idx,element in enumerate(self.X):
             if self.Y[idx] == 1 and w.dot(element) < 0:
-                w [:] += element
+                w[:] += element
             elif self.Y[idx] == 0 and w.dot(element) >= 0:
                 w[:] -= element
 
     @staticmethod
     def classify(x, weights):
+        """Returns class label according to the dot product of weights and 
+        our data instance
+        """
         return 1 if weights.dot(x) >= 0 else 0
 
     def get_validation_labels(self, W):
+        """Classifies all test data elements using trained set of weights."""
         return np.array([Perceptron.classify(x,W) for x in self.X_test])
 
     @staticmethod
     def get_accuracy(actual_labels, predicted_labels):
+        """Returns the accuracy given the actual and predicted labels."""
         return np.count_nonzero(actual_labels == predicted_labels)/actual_labels.size
