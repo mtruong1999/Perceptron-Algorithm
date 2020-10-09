@@ -10,6 +10,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.decomposition import PCA
 from perceptron import Perceptron
 from tabulate import tabulate
+from optparse import OptionParser
 
 DATA_DIR = os.path.join('data','data.mat') # input file
 ACCURACY_THRESHOLD = 0.993 # Threshold for 5-fold CV on full data
@@ -176,13 +177,22 @@ def run_decision_tree(data):
 
 
 if __name__ == '__main__':
+    # Add command line arguments
+    optparser = OptionParser()
+    optparser.add_option('-o','--outputFile',
+                        dest='output_file',
+                        help='filename for output text file',
+                        default=OUTPUT_FILE)
+    (options, args) = optparser.parse_args()
+    output_file = options.output_file
+
     data = sio.loadmat(DATA_DIR)['data']
     
     fold_infos, fold_infos_pca = run_experiment(data)
 
     accuracy = run_decision_tree(data)
 
-    with open(OUTPUT_FILE, 'w') as f:
+    with open(output_file, 'w') as f:
         f.write('1. 5-fold cross validation results on FULL dataset\n')
         f.write(tabulate(fold_infos, headers=['Fold #', 
                                             'Iterations Required',
