@@ -42,7 +42,7 @@ class Perceptron:
 
                 if epoch_accuracy >= self.acc_thresh:
                     accuracy_met = True
-            return w, num_epochs_elapsed, epoch_accuracy
+            return num_epochs_elapsed, epoch_accuracy
         else:
             for _ in range(self.epochs):
                 self.epoch_fit(w)

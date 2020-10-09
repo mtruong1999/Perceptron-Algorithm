@@ -9,15 +9,23 @@ from sklearn import preprocessing
 from sklearn.model_selection import StratifiedKFold
 from sklearn.decomposition import PCA
 from perceptron import Perceptron
+from tabulate import tabulate
 
-DATA_DIR = os.path.join('data','data.mat')
-NUM_EPOCHS = 100
-ACCURACY_THRESHOLD = 0.993
+DATA_DIR = os.path.join('data','data.mat') # input file
+ACCURACY_THRESHOLD = 0.993 # Threshold for 5-fold CV on full data
+ACCURACY_THRESHOLD_PCA = 0.92 # Threshold for 5-fold CV on PCA reduced data
+OUTPUT_FILE = 'results.txt' # Output file name
+
+# Globals for 4-class classifier
+EPOCHS_1_2 = 1 # Epochs for training classifier on labels 1 and 2 
+EPOCHS_3_4 = 1 # Epochs for training classifier on labels 3 and 4
+EPOCHS_A_B = 2 # Epochs for parent node training on A/B combined labels
 
 def get_five_fold_accuracies(X, classes, accuracy_thresh):
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
     fold_count = 0
     fold_accuracies = np.zeros(5)
+    fold_infos = []
     for train_index, test_index in skf.split(X, classes):
         fold_count += 1
 
@@ -30,12 +38,13 @@ def get_five_fold_accuracies(X, classes, accuracy_thresh):
         # Get weights from training set
         fold_perceptron = Perceptron(X_train, Y_train, 
                                     X_test, Y_test, accuracy_thresh)
-        fold_weights, iter_required, fold_accuracy = fold_perceptron.train()
+        iter_required, fold_accuracy = fold_perceptron.train()
 
-        print("\tElapsed time: {} seconds".format(time.time() - start_time))
-        #fold_accuracies[fold_count - 1] = fold_accuracy
-    
-    return fold_accuracies
+        elapsed_time = time.time() - start_time
+        print("\tElapsed time: {} seconds".format(elapsed_time))
+        fold_accuracies[fold_count - 1] = fold_accuracy
+        fold_infos.append([fold_count, iter_required, fold_accuracy, elapsed_time])
+    return fold_infos
 	
 def run_experiment(data):
     # Extract our classes
@@ -46,7 +55,7 @@ def run_experiment(data):
     data = scaler.fit_transform(data)
     # Turn first column into all 1's for bias (first column had the classes, which is irrelevant)
     data[:,0] = 1
-    get_five_fold_accuracies(data, binary_classes, ACCURACY_THRESHOLD)
+    fold_infos = get_five_fold_accuracies(data, binary_classes, ACCURACY_THRESHOLD)
 
     pca = PCA(n_components=2)
     # Fit and transform data without the first column
@@ -57,7 +66,8 @@ def run_experiment(data):
             np.ones((num_rows, 1)),
             transformed_data
     ))
-    get_five_fold_accuracies(transformed_data, binary_classes, 0.92)
+    fold_infos_pca = get_five_fold_accuracies(transformed_data, binary_classes, ACCURACY_THRESHOLD_PCA)
+    return fold_infos, fold_infos_pca
 
 
 def run_decision_tree(data):
@@ -73,7 +83,7 @@ def run_decision_tree(data):
     scaler_1_2 = preprocessing.StandardScaler()
     data_1_2 = scaler_1_2.fit_transform(data_1_2)
     data_1_2[:,0] = 1
-    perceptron_1_2 = Perceptron(data_1_2, binary_labels_1_2, epochs=2)
+    perceptron_1_2 = Perceptron(data_1_2, binary_labels_1_2, epochs=EPOCHS_1_2)
 
     weights_1_2 = perceptron_1_2.train()
     # delete data as we dont need it anymore
@@ -88,7 +98,7 @@ def run_decision_tree(data):
     scaler_3_4 = preprocessing.StandardScaler()
     data_3_4 = scaler_3_4.fit_transform(data_3_4)
     data_3_4[:,0] = 1
-    perceptron_3_4 = Perceptron(data_3_4, binary_labels_3_4, epochs=2)
+    perceptron_3_4 = Perceptron(data_3_4, binary_labels_3_4, epochs=EPOCHS_3_4)
 
     weights_3_4 = perceptron_3_4.train()
     del data_3_4
@@ -100,7 +110,7 @@ def run_decision_tree(data):
     scaler = preprocessing.StandardScaler()
     data = scaler.fit_transform(data)
     data[:,0] = 1
-    perceptron = Perceptron(data, binary_classes, epochs=2)
+    perceptron = Perceptron(data, binary_classes, epochs=EPOCHS_A_B)
     weights = perceptron.train()
 
     # Run classifcation on full data set
@@ -122,7 +132,24 @@ def run_decision_tree(data):
 if __name__ == '__main__':
     data = sio.loadmat(DATA_DIR)['data']
     
-    run_experiment(data)
+    fold_infos, fold_infos_pca = run_experiment(data)
 
-    run_decision_tree(data)
+    accuracy = run_decision_tree(data)
+
+    with open(OUTPUT_FILE, 'w') as f:
+        f.write('1. 5-fold cross validation results on FULL dataset\n')
+        f.write(tabulate(fold_infos, headers=['Fold #', 
+                                            'Iterations Required',
+                                            'Fold Accuracy',
+                                            'Running Time (sec)']))
+
+        f.write('\n\n2. 5-fold cross validation results on PCA reduction dataset using 2 principle components\n')
+        f.write(tabulate(fold_infos_pca, headers=['Fold #',
+                                                'Iterations Required',
+                                                'Fold Accuracy',
+                                                'Running Time (sec)']))
+        
+        f.write('\n\n3. Accuracy of 4-class classifier on full dataset.\n')
+        f.write('---------------------------------------------------\n')
+        f.write('Accuracy: {}\n'.format(accuracy))
 
