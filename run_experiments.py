@@ -22,6 +22,25 @@ EPOCHS_3_4 = 1 # Epochs for training classifier on labels 3 and 4
 EPOCHS_A_B = 2 # Epochs for parent node training on A/B combined labels
 
 def get_five_fold_accuracies(X, classes, accuracy_thresh):
+    """Runs 5-fold cross validation on input data X with given classes
+    and trains each fold until a given accuracy threshold is met.
+
+    Parameters
+    ----------
+    X: 2-D numpy array containing the input data
+    classes: 1-D numpy array containing the corresponding class
+        labels for X
+    accuracy_thresh: float, continue training until this threshold is
+        met.
+    
+    Returns
+    ----------
+    List of lists, each list element containing fold information to be
+    reported. Includes the fold number with the number of iterations
+    required to meet accuracy_thresh, the fold accuracy, and the training
+    time.
+
+    """
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
     fold_count = 0
     fold_accuracies = np.zeros(5)
@@ -47,6 +66,19 @@ def get_five_fold_accuracies(X, classes, accuracy_thresh):
     return fold_infos
 	
 def run_experiment(data):
+    """Runs 5-fold cross validation on the normalized data set
+    and the dataset reduced by the first two principle components.
+
+    Parameters
+    ----------
+    data - numpy array containing the raw data directly imported by main
+
+    Returns
+    ----------
+    The fold informations (described in `get_five_fold_accuracies`) for both
+    the normalized data and PCA reduced data.
+
+    """
     # Extract our classes
     Y = data[:, 0]
     binary_classes = np.where(Y <= 2, 0, 1)
@@ -71,12 +103,25 @@ def run_experiment(data):
 
 
 def run_decision_tree(data):
-	# Train on data
-	# Filter out data by classes
-	# train on the smaller data sets
+    """Trains 3 binary classifiers and combined them into a decision
+    tree. The first node test whether a value belongs to class A
+    (which represents labels 1 and 2) or class B (which represents
+    labels 3 and 4). If A, we classify the data instance using a model
+    trained to classify for the classes 1 and 2. If B, we classify the 
+    data instance using a model trained to classify for 3 and 4.
+
+    Parameters
+    -----------
+    data - numpy array containing the raw data directly imported by main
+
+    Returns
+    -----------
+    The classification accuracy when running the model on the full dataset.
+    """
     
     # Filter out data to get labels 1 and 2 only
     data_1_2 = data[data[:,0]<=2]
+
     # Extract and binarize labels 
     binary_labels_1_2 = np.where(data_1_2[:,0] == 1,0, 1)
     
@@ -84,14 +129,15 @@ def run_decision_tree(data):
     data_1_2 = scaler_1_2.fit_transform(data_1_2)
     data_1_2[:,0] = 1
     perceptron_1_2 = Perceptron(data_1_2, binary_labels_1_2, epochs=EPOCHS_1_2)
-
     weights_1_2 = perceptron_1_2.train()
+
     # delete data as we dont need it anymore
     del data_1_2
     del binary_labels_1_2
 
     # Filter out data to get labels 3 and 4 only
     data_3_4 = data[data[:,0] > 2]
+
     # Extract and binarize labels 
     binary_labels_3_4 = np.where(data_3_4[:,0] == 3, 0, 1)
     
@@ -99,7 +145,6 @@ def run_decision_tree(data):
     data_3_4 = scaler_3_4.fit_transform(data_3_4)
     data_3_4[:,0] = 1
     perceptron_3_4 = Perceptron(data_3_4, binary_labels_3_4, epochs=EPOCHS_3_4)
-
     weights_3_4 = perceptron_3_4.train()
     del data_3_4
     del binary_labels_3_4
@@ -113,11 +158,12 @@ def run_decision_tree(data):
     perceptron = Perceptron(data, binary_classes, epochs=EPOCHS_A_B)
     weights = perceptron.train()
 
-    # Run classifcation on full data set
+    # Decision tree: run classifcation on full data set
     predicted_labels = np.empty(data.shape[0])
     for i, x in enumerate(data):
         # Classify between A and B
         firstNode = Perceptron.classify(x, weights)
+        
         # If class is A...
         if firstNode == 0:
             secondNode = Perceptron.classify(x, weights_1_2)
